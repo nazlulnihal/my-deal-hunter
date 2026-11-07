@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  sniper-api:
+    build: .
+    container_name: sniper-intelligence-api
+    restart: unless-stopped
+    env_file:
+      - .env.example
+    environment:
+      - SNIPER_DB_PATH=/srv/sniper/data/sniper_intelligence.db
+    volumes:
+      - sniper_data:/srv/sniper/data
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  sniper-worker:
+    build: .
+    container_name: sniper-background-worker
+    restart: unless-stopped
+    command: ["python3", "-m", "app.worker", "0"]
+    env_file:
+      - .env.example
+    environment:
+      - SNIPER_DB_PATH=/srv/sniper/data/sniper_intelligence.db
+      - SNIPER_WORKER_TICK_SECONDS=60
+    volumes:
+      - sniper_data:/srv/sniper/data
+    depends_on:
+      - sniper-api
+
+volumes:
+  sniper_data:
